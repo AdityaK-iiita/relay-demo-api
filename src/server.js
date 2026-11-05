@@ -21,6 +21,17 @@ const server = http.createServer((req, res) => {
     return sendJson(res, 200, { tasks });
   }
 
+  if (req.method === "GET" && /^\/api\/tasks\/\d+$/.test(url.pathname)) {
+    const id = Number(url.pathname.split("/").pop());
+    const task = tasks.find(item => item.id === id);
+
+    if (!task) {
+      return sendJson(res, 404, { error: "Task not found" });
+    }
+
+    return sendJson(res, 200, { task });
+  }
+
   if (req.method === "POST" && url.pathname === "/api/tasks") {
     let body = "";
 
@@ -37,7 +48,7 @@ const server = http.createServer((req, res) => {
         return sendJson(res, 400, { error: "Invalid JSON" });
       }
 
-      if (!input.title || typeof input.title !== "string") {
+      if (!input.title || typeof input.title !== "string" || !input.title.trim()) {
         return sendJson(res, 400, { error: "A task title is required" });
       }
 
