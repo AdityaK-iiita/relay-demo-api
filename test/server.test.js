@@ -210,6 +210,9 @@ test("task endpoints support lookup, completion filtering, and completion update
     assert.equal(healthBody.service, "relay-demo-api");
     assert.equal(Number.isInteger(healthBody.uptimeSeconds), true);
     assert.equal(healthBody.uptimeSeconds >= 0, true);
+    const requestId = health.headers.get("x-request-id");
+    assert.match(requestId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+
 
   } finally {
     await new Promise(resolve => server.close(resolve));
