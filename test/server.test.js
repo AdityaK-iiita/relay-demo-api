@@ -16,7 +16,7 @@ test("task endpoints support lookup, completion filtering, and completion update
 
     const missing = await fetch(`${baseUrl}/api/tasks/999`);
     assert.equal(missing.status, 404);
-    assert.deepEqual(await missing.json(), { error: "Task not found" });
+    assert.deepEqual(await missing.json(), { error: "Task not found", code: "TASK_NOT_FOUND" });
 
     const incomplete = await fetch(`${baseUrl}/api/tasks?completed=false`);
     assert.equal(incomplete.status, 200);
@@ -129,11 +129,11 @@ test("task endpoints support lookup, completion filtering, and completion update
 
     const deletedLookup = await fetch(`${baseUrl}/api/tasks/2`);
     assert.equal(deletedLookup.status, 404);
-    assert.deepEqual(await deletedLookup.json(), { error: "Task not found" });
+    assert.deepEqual(await deletedLookup.json(), { error: "Task not found", code: "TASK_NOT_FOUND" });
 
     const deleteMissing = await fetch(`${baseUrl}/api/tasks/999`, { method: "DELETE" });
     assert.equal(deleteMissing.status, 404);
-    assert.deepEqual(await deleteMissing.json(), { error: "Task not found" });
+    assert.deepEqual(await deleteMissing.json(), { error: "Task not found", code: "TASK_NOT_FOUND" });
 
     for (const invalidBody of ["null", "[]", "\"plain text\""]) {
       const invalidPayload = await fetch(`${baseUrl}/api/tasks`, {
