@@ -10,6 +10,10 @@ function sendJson(res, statusCode, data) {
   res.end(JSON.stringify(data));
 }
 
+function sendError(res, statusCode, code, message) {
+  return sendJson(res, statusCode, { error: message, code });
+}
+
 const MAX_BODY_BYTES = 1024 * 1024;
 
 function readJsonBody(req, res, onParsed) {
@@ -23,7 +27,7 @@ function readJsonBody(req, res, onParsed) {
 
     if (Buffer.byteLength(body) > MAX_BODY_BYTES) {
       tooLarge = true;
-      return sendJson(res, 413, { error: "Request body too large" });
+      return sendError(res, 413, "BODY_TOO_LARGE", "Request body too large");
     }
   });
 
@@ -33,7 +37,7 @@ function readJsonBody(req, res, onParsed) {
     try {
       onParsed(JSON.parse(body));
     } catch {
-      sendJson(res, 400, { error: "Invalid JSON" });
+      sendError(res, 400, "INVALID_JSON", "Invalid JSON");
     }
   });
 }
@@ -53,7 +57,7 @@ const server = http.createServer((req, res) => {
     const completed = url.searchParams.get("completed");
 
     if (completed !== null && completed !== "true" && completed !== "false") {
-      return sendJson(res, 400, { error: "The completed filter must be true or false" });
+      return sendError(res, 400, "INVALID_COMPLETED_FILTER", "The completed filter must be true or false");
     }
 
     const statusFilteredTasks = completed === null
@@ -78,11 +82,11 @@ const server = http.createServer((req, res) => {
     const offset = rawOffset === null ? 0 : Number(rawOffset);
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-      return sendJson(res, 400, { error: "The limit must be an integer between 1 and 100" });
+      return sendError(res, 400, "INVALID_LIMIT", "The limit must be an integer between 1 and 100");
     }
 
     if (!Number.isInteger(offset) || offset < 0) {
-      return sendJson(res, 400, { error: "The offset must be a non-negative integer" });
+      return sendError(res, 400, "INVALID_OFFSET", "The offset must be a non-negative integer");
     }
 
     const page = matchingTasks.slice(offset, offset + limit);
@@ -103,7 +107,7 @@ const server = http.createServer((req, res) => {
     const taskIndex = tasks.findIndex(item => item.id === id);
 
     if (taskIndex === -1) {
-      return sendJson(res, 404, { error: "Task not found" });
+      return sendError(res, 404, "TASK_NOT_FOUND", "Task not found");
     }
 
     const [deletedTask] = tasks.splice(taskIndex, 1);
@@ -115,27 +119,27 @@ const server = http.createServer((req, res) => {
     const task = tasks.find(item => item.id === id);
 
     if (!task) {
-      return sendJson(res, 404, { error: "Task not found" });
+      return sendError(res, 404, "TASK_NOT_FOUND", "Task not found");
     }
 
     readJsonBody(req, res, input => {
       if (!input || typeof input !== "object" || Array.isArray(input)) {
-        return sendJson(res, 400, { error: "A JSON object is required" });
+        return sendError(res, 400, "INVALID_BODY", "A JSON object is required");
       }
 
       const hasTitle = Object.prototype.hasOwnProperty.call(input, "title");
       const hasCompleted = Object.prototype.hasOwnProperty.call(input, "completed");
 
       if (!hasTitle && !hasCompleted) {
-        return sendJson(res, 400, { error: "At least one supported field is required" });
+        return sendError(res, 400, "EMPTY_UPDATE", "At least one supported field is required");
       }
 
       if (hasTitle && (typeof input.title !== "string" || !input.title.trim())) {
-        return sendJson(res, 400, { error: "The title must be a non-empty string" });
+        return sendError(res, 400, "INVALID_TITLE", "The title must be a non-empty string");
       }
 
       if (hasCompleted && typeof input.completed !== "boolean") {
-        return sendJson(res, 400, { error: "The completed field must be a boolean" });
+        return sendError(res, 400, "INVALID_COMPLETED", "The completed field must be a boolean");
       }
 
       if (hasTitle) task.title = input.title.trim();
@@ -152,7 +156,7 @@ const server = http.createServer((req, res) => {
     const task = tasks.find(item => item.id === id);
 
     if (!task) {
-      return sendJson(res, 404, { error: "Task not found" });
+      return sendError(res, 404, "TASK_NOT_FOUND", "Task not found");
     }
 
     return sendJson(res, 200, { task });
@@ -161,18 +165,18 @@ const server = http.createServer((req, res) => {
   if (req.method === "POST" && url.pathname === "/api/tasks") {
     readJsonBody(req, res, input => {
       if (!input || typeof input !== "object" || Array.isArray(input)) {
-        return sendJson(res, 400, { error: "A JSON object is required" });
+        return sendError(res, 400, "INVALID_BODY", "A JSON object is required");
       }
 
       if (typeof input.title !== "string" || !input.title.trim()) {
-        return sendJson(res, 400, { error: "A task title is required" });
+        return sendError(res, 400, "INVALID_TITLE", "A task title is required");
       }
 
       const normalizedTitle = input.title.trim().toLowerCase();
       const duplicate = tasks.some(task => task.title.toLowerCase() === normalizedTitle);
 
       if (duplicate) {
-        return sendJson(res, 409, { error: "A task with this title already exists" });
+        return sendError(res, 409, "DUPLICATE_TASK", "A task with this title already exists");
       }
 
       const task = {
@@ -188,7 +192,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  return sendJson(res, 404, { error: "Route not found" });
+  return sendError(res, 404, "ROUTE_NOT_FOUND", "Route not found");
 });
 
 if (require.main === module) {
