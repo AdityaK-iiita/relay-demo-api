@@ -61,6 +61,36 @@ test("task endpoints support lookup, completion filtering, and completion update
       body: JSON.stringify({ completed: true })
     });
     assert.equal(missingUpdate.status, 404);
+    const renamed = await fetch(`${baseUrl}/api/tasks/1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Publish API reference" })
+    });
+    assert.equal(renamed.status, 200);
+    assert.deepEqual(await renamed.json(), {
+      task: { id: 1, title: "Publish API reference", completed: true }
+    });
+
+    const emptyTitle = await fetch(`${baseUrl}/api/tasks/1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "   " })
+    });
+    assert.equal(emptyTitle.status, 400);
+    assert.deepEqual(await emptyTitle.json(), {
+      error: "The title must be a non-empty string"
+    });
+
+    const emptyPatch = await fetch(`${baseUrl}/api/tasks/1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
+    assert.equal(emptyPatch.status, 400);
+    assert.deepEqual(await emptyPatch.json(), {
+      error: "At least one supported field is required"
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }
