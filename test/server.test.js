@@ -61,6 +61,50 @@ test("task endpoints support lookup, completion filtering, and completion update
       body: JSON.stringify({ completed: true })
     });
     assert.equal(missingUpdate.status, 404);
+    const renamed = await fetch(`${baseUrl}/api/tasks/1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Publish API reference" })
+    });
+    assert.equal(renamed.status, 200);
+    assert.deepEqual(await renamed.json(), {
+      task: { id: 1, title: "Publish API reference", completed: true }
+    });
+
+    const emptyTitle = await fetch(`${baseUrl}/api/tasks/1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "   " })
+    });
+    assert.equal(emptyTitle.status, 400);
+    assert.deepEqual(await emptyTitle.json(), {
+      error: "The title must be a non-empty string"
+    });
+
+    const emptyPatch = await fetch(`${baseUrl}/api/tasks/1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
+    assert.equal(emptyPatch.status, 400);
+    assert.deepEqual(await emptyPatch.json(), {
+      error: "At least one supported field is required"
+    });
+
+    const deleted = await fetch(`${baseUrl}/api/tasks/2`, { method: "DELETE" });
+    assert.equal(deleted.status, 200);
+    assert.deepEqual(await deleted.json(), {
+      task: { id: 2, title: "Add request validation", completed: false }
+    });
+
+    const deletedLookup = await fetch(`${baseUrl}/api/tasks/2`);
+    assert.equal(deletedLookup.status, 404);
+    assert.deepEqual(await deletedLookup.json(), { error: "Task not found" });
+
+    const deleteMissing = await fetch(`${baseUrl}/api/tasks/999`, { method: "DELETE" });
+    assert.equal(deleteMissing.status, 404);
+    assert.deepEqual(await deleteMissing.json(), { error: "Task not found" });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }
