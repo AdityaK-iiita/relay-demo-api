@@ -1,4 +1,5 @@
 const http = require("node:http");
+const { randomUUID } = require("node:crypto");
 
 const tasks = [
   { id: 1, title: "Document the API", completed: false },
@@ -43,6 +44,7 @@ function readJsonBody(req, res, onParsed) {
 }
 
 const server = http.createServer((req, res) => {
+  res.setHeader("X-Request-Id", randomUUID());
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if (req.method === "GET" && url.pathname === "/health") {
