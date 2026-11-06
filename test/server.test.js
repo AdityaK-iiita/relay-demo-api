@@ -172,6 +172,26 @@ test("task endpoints support lookup, completion filtering, and completion update
       pagination: { limit: 1, offset: 0, total: 1, hasMore: false }
     });
 
+    const duplicateTask = await fetch(`${baseUrl}/api/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "  publish api REFERENCE " })
+    });
+    assert.equal(duplicateTask.status, 409);
+    assert.deepEqual(await duplicateTask.json(), {
+      error: "A task with this title already exists"
+    });
+
+    const createdTask = await fetch(`${baseUrl}/api/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Add release notes" })
+    });
+    assert.equal(createdTask.status, 201);
+    assert.deepEqual(await createdTask.json(), {
+      task: { id: 2, title: "Add release notes", completed: false }
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }
