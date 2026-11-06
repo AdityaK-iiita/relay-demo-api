@@ -28,9 +28,7 @@ test("task endpoints support lookup, completion filtering, and completion update
 
     const invalidFilter = await fetch(`${baseUrl}/api/tasks?completed=yes`);
     assert.equal(invalidFilter.status, 400);
-    assert.deepEqual(await invalidFilter.json(), {
-      error: "The completed filter must be true or false"
-    });
+    assert.deepEqual(await invalidFilter.json(), { error: "The completed filter must be true or false", code: "INVALID_COMPLETED_FILTER" });
 
     const updated = await fetch(`${baseUrl}/api/tasks/1`, {
       method: "PATCH",
@@ -51,9 +49,7 @@ test("task endpoints support lookup, completion filtering, and completion update
       body: JSON.stringify({ completed: "yes" })
     });
     assert.equal(invalidUpdate.status, 400);
-    assert.deepEqual(await invalidUpdate.json(), {
-      error: "The completed field must be a boolean"
-    });
+    assert.deepEqual(await invalidUpdate.json(), { error: "The completed field must be a boolean", code: "INVALID_COMPLETED" });
 
     const missingUpdate = await fetch(`${baseUrl}/api/tasks/999`, {
       method: "PATCH",
@@ -77,9 +73,7 @@ test("task endpoints support lookup, completion filtering, and completion update
       body: JSON.stringify({ title: "   " })
     });
     assert.equal(emptyTitle.status, 400);
-    assert.deepEqual(await emptyTitle.json(), {
-      error: "The title must be a non-empty string"
-    });
+    assert.deepEqual(await emptyTitle.json(), { error: "The title must be a non-empty string", code: "INVALID_TITLE" });
 
     const emptyPatch = await fetch(`${baseUrl}/api/tasks/1`, {
       method: "PATCH",
@@ -87,14 +81,12 @@ test("task endpoints support lookup, completion filtering, and completion update
       body: JSON.stringify({})
     });
     assert.equal(emptyPatch.status, 400);
-    assert.deepEqual(await emptyPatch.json(), {
-      error: "At least one supported field is required"
-    });
+    assert.deepEqual(await emptyPatch.json(), { error: "At least one supported field is required", code: "EMPTY_UPDATE" });
 
     const firstPage = await fetch(`${baseUrl}/api/tasks?limit=1&offset=0`);
     assert.equal(firstPage.status, 200);
     assert.deepEqual(await firstPage.json(), {
-      tasks: [{ id: 1, title: "Document the API", completed: false }],
+      tasks: [{ id: 1, title: "Publish API reference", completed: true }],
       pagination: { limit: 1, offset: 0, total: 2, hasMore: true }
     });
 
@@ -107,19 +99,30 @@ test("task endpoints support lookup, completion filtering, and completion update
 
     const invalidLimit = await fetch(`${baseUrl}/api/tasks?limit=0`);
     assert.equal(invalidLimit.status, 400);
-    assert.deepEqual(await invalidLimit.json(), {
-      error: "The limit must be an integer between 1 and 100"
-    });
+    assert.deepEqual(await invalidLimit.json(), { error: "The limit must be an integer between 1 and 100", code: "INVALID_LIMIT" });
 
     const invalidOffset = await fetch(`${baseUrl}/api/tasks?offset=-1`);
     assert.equal(invalidOffset.status, 400);
-    assert.deepEqual(await invalidOffset.json(), {
-      error: "The offset must be a non-negative integer"
-    });
+    assert.deepEqual(await invalidOffset.json(), { error: "The offset must be a non-negative integer", code: "INVALID_OFFSET" });
 
     const filteredPage = await fetch(`${baseUrl}/api/tasks?completed=false&limit=1&offset=0`);
     assert.equal(filteredPage.status, 200);
-    assert.equal((await filteredPage.json()).pagination.total, 2);
+    assert.equal((await filteredPage.json()).pagination.total, 1);
+
+    const searchResults = await fetch(`${baseUrl}/api/tasks?q=API`);
+    assert.equal(searchResults.status, 200);
+    assert.deepEqual((await searchResults.json()).tasks.map(task => task.id), [1]);
+
+    const caseInsensitiveSearch = await fetch(`${baseUrl}/api/tasks?q=VALIDATION`);
+    assert.equal(caseInsensitiveSearch.status, 200);
+    assert.deepEqual((await caseInsensitiveSearch.json()).tasks.map(task => task.id), [2]);
+
+    const combinedSearch = await fetch(`${baseUrl}/api/tasks?q=publish&completed=true&limit=1`);
+    assert.equal(combinedSearch.status, 200);
+    assert.deepEqual(await combinedSearch.json(), {
+      tasks: [{ id: 1, title: "Publish API reference", completed: true }],
+      pagination: { limit: 1, offset: 0, total: 1, hasMore: false }
+    });
 
     const deleted = await fetch(`${baseUrl}/api/tasks/2`, { method: "DELETE" });
     assert.equal(deleted.status, 200);
@@ -142,9 +145,7 @@ test("task endpoints support lookup, completion filtering, and completion update
         body: invalidBody
       });
       assert.equal(invalidPayload.status, 400);
-      assert.deepEqual(await invalidPayload.json(), {
-        error: "A JSON object is required"
-      });
+      assert.deepEqual(await invalidPayload.json(), { error: "A JSON object is required", code: "INVALID_BODY" });
     }
 
     const blankTitle = await fetch(`${baseUrl}/api/tasks`, {
@@ -153,24 +154,7 @@ test("task endpoints support lookup, completion filtering, and completion update
       body: JSON.stringify({ title: "   " })
     });
     assert.equal(blankTitle.status, 400);
-    assert.deepEqual(await blankTitle.json(), {
-      error: "A task title is required"
-    });
-
-    const searchResults = await fetch(`${baseUrl}/api/tasks?q=API`);
-    assert.equal(searchResults.status, 200);
-    assert.deepEqual((await searchResults.json()).tasks.map(task => task.id), [1]);
-
-    const caseInsensitiveSearch = await fetch(`${baseUrl}/api/tasks?q=VALIDATION`);
-    assert.equal(caseInsensitiveSearch.status, 200);
-    assert.deepEqual((await caseInsensitiveSearch.json()).tasks.map(task => task.id), [2]);
-
-    const combinedSearch = await fetch(`${baseUrl}/api/tasks?q=document&completed=false&limit=1`);
-    assert.equal(combinedSearch.status, 200);
-    assert.deepEqual(await combinedSearch.json(), {
-      tasks: [{ id: 1, title: "Document the API", completed: false }],
-      pagination: { limit: 1, offset: 0, total: 1, hasMore: false }
-    });
+    assert.deepEqual(await blankTitle.json(), { error: "A task title is required", code: "INVALID_TITLE" });
 
     const duplicateTask = await fetch(`${baseUrl}/api/tasks`, {
       method: "POST",
@@ -178,9 +162,7 @@ test("task endpoints support lookup, completion filtering, and completion update
       body: JSON.stringify({ title: "  publish api REFERENCE " })
     });
     assert.equal(duplicateTask.status, 409);
-    assert.deepEqual(await duplicateTask.json(), {
-      error: "A task with this title already exists"
-    });
+    assert.deepEqual(await duplicateTask.json(), { error: "A task with this title already exists", code: "DUPLICATE_TASK" });
 
     const createdTask = await fetch(`${baseUrl}/api/tasks`, {
       method: "POST",
@@ -189,7 +171,7 @@ test("task endpoints support lookup, completion filtering, and completion update
     });
     assert.equal(createdTask.status, 201);
     assert.deepEqual(await createdTask.json(), {
-      task: { id: 2, title: "Add release notes", completed: false }
+      task: { id: 3, title: "Add release notes", completed: false }
     });
 
     const oversizedBody = JSON.stringify({ title: "x".repeat(1024 * 1024) });
@@ -199,9 +181,7 @@ test("task endpoints support lookup, completion filtering, and completion update
       body: oversizedBody
     });
     assert.equal(oversizedRequest.status, 413);
-    assert.deepEqual(await oversizedRequest.json(), {
-      error: "Request body too large"
-    });
+    assert.deepEqual(await oversizedRequest.json(), { error: "Request body too large", code: "BODY_TOO_LARGE" });
 
     const health = await fetch(`${baseUrl}/health`);
     assert.equal(health.status, 200);
