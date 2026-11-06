@@ -54,11 +54,28 @@ const server = http.createServer((req, res) => {
         return sendJson(res, 400, { error: "Invalid JSON" });
       }
 
-      if (typeof input.completed !== "boolean") {
+      if (!input || typeof input !== "object" || Array.isArray(input)) {
+        return sendJson(res, 400, { error: "A JSON object is required" });
+      }
+
+      const hasTitle = Object.prototype.hasOwnProperty.call(input, "title");
+      const hasCompleted = Object.prototype.hasOwnProperty.call(input, "completed");
+
+      if (!hasTitle && !hasCompleted) {
+        return sendJson(res, 400, { error: "At least one supported field is required" });
+      }
+
+      if (hasTitle && (typeof input.title !== "string" || !input.title.trim())) {
+        return sendJson(res, 400, { error: "The title must be a non-empty string" });
+      }
+
+      if (hasCompleted && typeof input.completed !== "boolean") {
         return sendJson(res, 400, { error: "The completed field must be a boolean" });
       }
 
-      task.completed = input.completed;
+      if (hasTitle) task.title = input.title.trim();
+      if (hasCompleted) task.completed = input.completed;
+
       return sendJson(res, 200, { task });
     });
 
