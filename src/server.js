@@ -5,6 +5,7 @@ const tasks = [
   { id: 1, title: "Document the API", completed: false },
   { id: 2, title: "Add request validation", completed: false }
 ];
+let nextTaskId = Math.max(...tasks.map(task => task.id)) + 1;
 
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, { "Content-Type": "application/json" });
@@ -198,7 +199,7 @@ const server = http.createServer((req, res) => {
       }
 
       const task = {
-        id: tasks.length + 1,
+        id: nextTaskId++,
         title: input.title.trim(),
         completed: false
       };
