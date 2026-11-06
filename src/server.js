@@ -164,6 +164,13 @@ const server = http.createServer((req, res) => {
         return sendJson(res, 400, { error: "A task title is required" });
       }
 
+      const normalizedTitle = input.title.trim().toLowerCase();
+      const duplicate = tasks.some(task => task.title.toLowerCase() === normalizedTitle);
+
+      if (duplicate) {
+        return sendJson(res, 409, { error: "A task with this title already exists" });
+      }
+
       const task = {
         id: tasks.length + 1,
         title: input.title.trim(),
