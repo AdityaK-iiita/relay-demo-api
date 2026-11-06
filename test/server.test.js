@@ -192,6 +192,17 @@ test("task endpoints support lookup, completion filtering, and completion update
       task: { id: 2, title: "Add release notes", completed: false }
     });
 
+    const oversizedBody = JSON.stringify({ title: "x".repeat(1024 * 1024) });
+    const oversizedRequest = await fetch(`${baseUrl}/api/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: oversizedBody
+    });
+    assert.equal(oversizedRequest.status, 413);
+    assert.deepEqual(await oversizedRequest.json(), {
+      error: "Request body too large"
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

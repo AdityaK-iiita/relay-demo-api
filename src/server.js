@@ -10,6 +10,34 @@ function sendJson(res, statusCode, data) {
   res.end(JSON.stringify(data));
 }
 
+const MAX_BODY_BYTES = 1024 * 1024;
+
+function readJsonBody(req, res, onParsed) {
+  let body = "";
+  let tooLarge = false;
+
+  req.on("data", chunk => {
+    if (tooLarge) return;
+
+    body += chunk;
+
+    if (Buffer.byteLength(body) > MAX_BODY_BYTES) {
+      tooLarge = true;
+      return sendJson(res, 413, { error: "Request body too large" });
+    }
+  });
+
+  req.on("end", () => {
+    if (tooLarge) return;
+
+    try {
+      onParsed(JSON.parse(body));
+    } catch {
+      sendJson(res, 400, { error: "Invalid JSON" });
+    }
+  });
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
@@ -86,21 +114,7 @@ const server = http.createServer((req, res) => {
       return sendJson(res, 404, { error: "Task not found" });
     }
 
-    let body = "";
-
-    req.on("data", chunk => {
-      body += chunk;
-    });
-
-    req.on("end", () => {
-      let input;
-
-      try {
-        input = JSON.parse(body);
-      } catch {
-        return sendJson(res, 400, { error: "Invalid JSON" });
-      }
-
+    readJsonBody(req, res, input => {
       if (!input || typeof input !== "object" || Array.isArray(input)) {
         return sendJson(res, 400, { error: "A JSON object is required" });
       }
@@ -141,21 +155,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/api/tasks") {
-    let body = "";
-
-    req.on("data", chunk => {
-      body += chunk;
-    });
-
-    req.on("end", () => {
-      let input;
-
-      try {
-        input = JSON.parse(body);
-      } catch {
-        return sendJson(res, 400, { error: "Invalid JSON" });
-      }
-
+    readJsonBody(req, res, input => {
       if (!input || typeof input !== "object" || Array.isArray(input)) {
         return sendJson(res, 400, { error: "A JSON object is required" });
       }
