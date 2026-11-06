@@ -157,6 +157,21 @@ test("task endpoints support lookup, completion filtering, and completion update
       error: "A task title is required"
     });
 
+    const searchResults = await fetch(`${baseUrl}/api/tasks?q=API`);
+    assert.equal(searchResults.status, 200);
+    assert.deepEqual((await searchResults.json()).tasks.map(task => task.id), [1]);
+
+    const caseInsensitiveSearch = await fetch(`${baseUrl}/api/tasks?q=VALIDATION`);
+    assert.equal(caseInsensitiveSearch.status, 200);
+    assert.deepEqual((await caseInsensitiveSearch.json()).tasks.map(task => task.id), [2]);
+
+    const combinedSearch = await fetch(`${baseUrl}/api/tasks?q=document&completed=false&limit=1`);
+    assert.equal(combinedSearch.status, 200);
+    assert.deepEqual(await combinedSearch.json(), {
+      tasks: [{ id: 1, title: "Document the API", completed: false }],
+      pagination: { limit: 1, offset: 0, total: 1, hasMore: false }
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }
