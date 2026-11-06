@@ -189,7 +189,7 @@ test("task endpoints support lookup, completion filtering, and completion update
     });
     assert.equal(createdTask.status, 201);
     assert.deepEqual(await createdTask.json(), {
-      task: { id: 2, title: "Add release notes", completed: false }
+      task: { id: 3, title: "Add release notes", completed: false }
     });
 
     const oversizedBody = JSON.stringify({ title: "x".repeat(1024 * 1024) });
