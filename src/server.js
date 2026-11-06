@@ -31,6 +31,18 @@ const server = http.createServer((req, res) => {
     return sendJson(res, 200, { tasks: filteredTasks });
   }
 
+  if (req.method === "DELETE" && /^\/api\/tasks\/\d+$/.test(url.pathname)) {
+    const id = Number(url.pathname.split("/").pop());
+    const taskIndex = tasks.findIndex(item => item.id === id);
+
+    if (taskIndex === -1) {
+      return sendJson(res, 404, { error: "Task not found" });
+    }
+
+    const [deletedTask] = tasks.splice(taskIndex, 1);
+    return sendJson(res, 200, { task: deletedTask });
+  }
+
   if (req.method === "PATCH" && /^\/api\/tasks\/\d+$/.test(url.pathname)) {
     const id = Number(url.pathname.split("/").pop());
     const task = tasks.find(item => item.id === id);

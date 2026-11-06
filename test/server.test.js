@@ -91,6 +91,20 @@ test("task endpoints support lookup, completion filtering, and completion update
       error: "At least one supported field is required"
     });
 
+    const deleted = await fetch(`${baseUrl}/api/tasks/2`, { method: "DELETE" });
+    assert.equal(deleted.status, 200);
+    assert.deepEqual(await deleted.json(), {
+      task: { id: 2, title: "Add request validation", completed: false }
+    });
+
+    const deletedLookup = await fetch(`${baseUrl}/api/tasks/2`);
+    assert.equal(deletedLookup.status, 404);
+    assert.deepEqual(await deletedLookup.json(), { error: "Task not found" });
+
+    const deleteMissing = await fetch(`${baseUrl}/api/tasks/999`, { method: "DELETE" });
+    assert.equal(deleteMissing.status, 404);
+    assert.deepEqual(await deleteMissing.json(), { error: "Task not found" });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }
