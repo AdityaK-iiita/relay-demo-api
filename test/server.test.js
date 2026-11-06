@@ -203,6 +203,14 @@ test("task endpoints support lookup, completion filtering, and completion update
       error: "Request body too large"
     });
 
+    const health = await fetch(`${baseUrl}/health`);
+    assert.equal(health.status, 200);
+    const healthBody = await health.json();
+    assert.equal(healthBody.status, "ok");
+    assert.equal(healthBody.service, "relay-demo-api");
+    assert.equal(Number.isInteger(healthBody.uptimeSeconds), true);
+    assert.equal(healthBody.uptimeSeconds >= 0, true);
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

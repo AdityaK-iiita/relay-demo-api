@@ -42,7 +42,11 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if (req.method === "GET" && url.pathname === "/health") {
-    return sendJson(res, 200, { status: "ok" });
+    return sendJson(res, 200, {
+      status: "ok",
+      service: "relay-demo-api",
+      uptimeSeconds: Math.floor(process.uptime())
+    });
   }
 
   if (req.method === "GET" && url.pathname === "/api/tasks") {
