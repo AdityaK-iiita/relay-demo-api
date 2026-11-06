@@ -93,7 +93,7 @@ const server = http.createServer((req, res) => {
         limit,
         offset,
         total: matchingTasks.length,
-        hasMore: offset + page.length < filteredTasks.length
+        hasMore: offset + page.length < matchingTasks.length
       }
     });
   }
