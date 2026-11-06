@@ -28,7 +28,36 @@ const server = http.createServer((req, res) => {
       ? tasks
       : tasks.filter(task => task.completed === (completed === "true"));
 
-    return sendJson(res, 200, { tasks: filteredTasks });
+    const hasPagination = url.searchParams.has("limit") || url.searchParams.has("offset");
+
+    if (!hasPagination) {
+      return sendJson(res, 200, { tasks: filteredTasks });
+    }
+
+    const rawLimit = url.searchParams.get("limit");
+    const rawOffset = url.searchParams.get("offset");
+    const limit = rawLimit === null ? 20 : Number(rawLimit);
+    const offset = rawOffset === null ? 0 : Number(rawOffset);
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      return sendJson(res, 400, { error: "The limit must be an integer between 1 and 100" });
+    }
+
+    if (!Number.isInteger(offset) || offset < 0) {
+      return sendJson(res, 400, { error: "The offset must be a non-negative integer" });
+    }
+
+    const page = filteredTasks.slice(offset, offset + limit);
+
+    return sendJson(res, 200, {
+      tasks: page,
+      pagination: {
+        limit,
+        offset,
+        total: filteredTasks.length,
+        hasMore: offset + page.length < filteredTasks.length
+      }
+    });
   }
 
   if (req.method === "DELETE" && /^\/api\/tasks\/\d+$/.test(url.pathname)) {

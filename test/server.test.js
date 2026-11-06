@@ -91,6 +91,36 @@ test("task endpoints support lookup, completion filtering, and completion update
       error: "At least one supported field is required"
     });
 
+    const firstPage = await fetch(`${baseUrl}/api/tasks?limit=1&offset=0`);
+    assert.equal(firstPage.status, 200);
+    assert.deepEqual(await firstPage.json(), {
+      tasks: [{ id: 1, title: "Document the API", completed: false }],
+      pagination: { limit: 1, offset: 0, total: 2, hasMore: true }
+    });
+
+    const secondPage = await fetch(`${baseUrl}/api/tasks?limit=1&offset=1`);
+    assert.equal(secondPage.status, 200);
+    assert.deepEqual(await secondPage.json(), {
+      tasks: [{ id: 2, title: "Add request validation", completed: false }],
+      pagination: { limit: 1, offset: 1, total: 2, hasMore: false }
+    });
+
+    const invalidLimit = await fetch(`${baseUrl}/api/tasks?limit=0`);
+    assert.equal(invalidLimit.status, 400);
+    assert.deepEqual(await invalidLimit.json(), {
+      error: "The limit must be an integer between 1 and 100"
+    });
+
+    const invalidOffset = await fetch(`${baseUrl}/api/tasks?offset=-1`);
+    assert.equal(invalidOffset.status, 400);
+    assert.deepEqual(await invalidOffset.json(), {
+      error: "The offset must be a non-negative integer"
+    });
+
+    const filteredPage = await fetch(`${baseUrl}/api/tasks?completed=false&limit=1&offset=0`);
+    assert.equal(filteredPage.status, 200);
+    assert.equal((await filteredPage.json()).pagination.total, 2);
+
     const deleted = await fetch(`${baseUrl}/api/tasks/2`, { method: "DELETE" });
     assert.equal(deleted.status, 200);
     assert.deepEqual(await deleted.json(), {
