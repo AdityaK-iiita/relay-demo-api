@@ -24,14 +24,20 @@ const server = http.createServer((req, res) => {
       return sendJson(res, 400, { error: "The completed filter must be true or false" });
     }
 
-    const filteredTasks = completed === null
+    const statusFilteredTasks = completed === null
       ? tasks
       : tasks.filter(task => task.completed === (completed === "true"));
+    const searchTerm = url.searchParams.get("q");
+    const matchingTasks = searchTerm === null || !searchTerm.trim()
+      ? statusFilteredTasks
+      : statusFilteredTasks.filter(task =>
+        task.title.toLowerCase().includes(searchTerm.trim().toLowerCase())
+      );
 
     const hasPagination = url.searchParams.has("limit") || url.searchParams.has("offset");
 
     if (!hasPagination) {
-      return sendJson(res, 200, { tasks: filteredTasks });
+      return sendJson(res, 200, { tasks: matchingTasks });
     }
 
     const rawLimit = url.searchParams.get("limit");
@@ -47,14 +53,14 @@ const server = http.createServer((req, res) => {
       return sendJson(res, 400, { error: "The offset must be a non-negative integer" });
     }
 
-    const page = filteredTasks.slice(offset, offset + limit);
+    const page = matchingTasks.slice(offset, offset + limit);
 
     return sendJson(res, 200, {
       tasks: page,
       pagination: {
         limit,
         offset,
-        total: filteredTasks.length,
+        total: matchingTasks.length,
         hasMore: offset + page.length < filteredTasks.length
       }
     });
