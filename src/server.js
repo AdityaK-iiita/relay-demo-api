@@ -18,7 +18,17 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/api/tasks") {
-    return sendJson(res, 200, { tasks });
+    const completed = url.searchParams.get("completed");
+
+    if (completed !== null && completed !== "true" && completed !== "false") {
+      return sendJson(res, 400, { error: "The completed filter must be true or false" });
+    }
+
+    const filteredTasks = completed === null
+      ? tasks
+      : tasks.filter(task => task.completed === (completed === "true"));
+
+    return sendJson(res, 200, { tasks: filteredTasks });
   }
 
   if (req.method === "GET" && /^\/api\/tasks\/\d+$/.test(url.pathname)) {
