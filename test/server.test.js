@@ -135,6 +135,28 @@ test("task endpoints support lookup, completion filtering, and completion update
     assert.equal(deleteMissing.status, 404);
     assert.deepEqual(await deleteMissing.json(), { error: "Task not found" });
 
+    for (const invalidBody of ["null", "[]", "\"plain text\""]) {
+      const invalidPayload = await fetch(`${baseUrl}/api/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: invalidBody
+      });
+      assert.equal(invalidPayload.status, 400);
+      assert.deepEqual(await invalidPayload.json(), {
+        error: "A JSON object is required"
+      });
+    }
+
+    const blankTitle = await fetch(`${baseUrl}/api/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "   " })
+    });
+    assert.equal(blankTitle.status, 400);
+    assert.deepEqual(await blankTitle.json(), {
+      error: "A task title is required"
+    });
+
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

@@ -150,7 +150,11 @@ const server = http.createServer((req, res) => {
         return sendJson(res, 400, { error: "Invalid JSON" });
       }
 
-      if (!input.title || typeof input.title !== "string" || !input.title.trim()) {
+      if (!input || typeof input !== "object" || Array.isArray(input)) {
+        return sendJson(res, 400, { error: "A JSON object is required" });
+      }
+
+      if (typeof input.title !== "string" || !input.title.trim()) {
         return sendJson(res, 400, { error: "A task title is required" });
       }
 
