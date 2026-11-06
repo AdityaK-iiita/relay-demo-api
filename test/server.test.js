@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { server } = require("../src/server");
 
-test("task endpoints return a task by ID or 404 and filter by completion", async () => {
+test("task endpoints support lookup, completion filtering, and completion updates", async () => {
   await new Promise(resolve => server.listen(0, resolve));
 
   try {
@@ -26,11 +26,41 @@ test("task endpoints return a task by ID or 404 and filter by completion", async
     assert.equal(complete.status, 200);
     assert.deepEqual((await complete.json()).tasks, []);
 
-    const invalid = await fetch(`${baseUrl}/api/tasks?completed=yes`);
-    assert.equal(invalid.status, 400);
-    assert.deepEqual(await invalid.json(), {
+    const invalidFilter = await fetch(`${baseUrl}/api/tasks?completed=yes`);
+    assert.equal(invalidFilter.status, 400);
+    assert.deepEqual(await invalidFilter.json(), {
       error: "The completed filter must be true or false"
     });
+
+    const updated = await fetch(`${baseUrl}/api/tasks/1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: true })
+    });
+    assert.equal(updated.status, 200);
+    assert.deepEqual(await updated.json(), {
+      task: { id: 1, title: "Document the API", completed: true }
+    });
+
+    const completedTasks = await fetch(`${baseUrl}/api/tasks?completed=true`);
+    assert.deepEqual((await completedTasks.json()).tasks.map(task => task.id), [1]);
+
+    const invalidUpdate = await fetch(`${baseUrl}/api/tasks/1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: "yes" })
+    });
+    assert.equal(invalidUpdate.status, 400);
+    assert.deepEqual(await invalidUpdate.json(), {
+      error: "The completed field must be a boolean"
+    });
+
+    const missingUpdate = await fetch(`${baseUrl}/api/tasks/999`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: true })
+    });
+    assert.equal(missingUpdate.status, 404);
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

@@ -31,6 +31,40 @@ const server = http.createServer((req, res) => {
     return sendJson(res, 200, { tasks: filteredTasks });
   }
 
+  if (req.method === "PATCH" && /^\/api\/tasks\/\d+$/.test(url.pathname)) {
+    const id = Number(url.pathname.split("/").pop());
+    const task = tasks.find(item => item.id === id);
+
+    if (!task) {
+      return sendJson(res, 404, { error: "Task not found" });
+    }
+
+    let body = "";
+
+    req.on("data", chunk => {
+      body += chunk;
+    });
+
+    req.on("end", () => {
+      let input;
+
+      try {
+        input = JSON.parse(body);
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+
+      if (typeof input.completed !== "boolean") {
+        return sendJson(res, 400, { error: "The completed field must be a boolean" });
+      }
+
+      task.completed = input.completed;
+      return sendJson(res, 200, { task });
+    });
+
+    return;
+  }
+
   if (req.method === "GET" && /^\/api\/tasks\/\d+$/.test(url.pathname)) {
     const id = Number(url.pathname.split("/").pop());
     const task = tasks.find(item => item.id === id);
