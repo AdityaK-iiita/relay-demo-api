@@ -44,8 +44,24 @@ function readJsonBody(req, res, onParsed) {
 }
 
 const server = http.createServer((req, res) => {
-  res.setHeader("X-Request-Id", randomUUID());
+  const requestId = randomUUID();
+  const startedAt = process.hrtime.bigint();
+  res.setHeader("X-Request-Id", requestId);
   const url = new URL(req.url, `http://${req.headers.host}`);
+
+  res.on("finish", () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+
+    console.log(JSON.stringify({
+      level: "info",
+      message: "request completed",
+      requestId,
+      method: req.method,
+      path: url.pathname,
+      statusCode: res.statusCode,
+      durationMs: Math.round(durationMs * 100) / 100
+    }));
+  });
 
   if (req.method === "GET" && url.pathname === "/health") {
     return sendJson(res, 200, {
